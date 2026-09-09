@@ -29,11 +29,11 @@
           <label>Glicemia-alvo (mg/dL)
             <input id="target-glucose" type="number" inputmode="decimal" min="0" placeholder="Ex.: 110" />
           </label>
-          <label>Glicemia atual (mg/dL)
-            <input id="current-glucose" type="number" inputmode="decimal" min="0" placeholder="Ex.: 180" />
-          </label>
           <label>Insulina de correção (unidades)
             <input id="correction-insulin" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ex.: 1" />
+          </label>
+          <label>Glicemia atual (mg/dL)
+            <input id="current-glucose" type="number" inputmode="decimal" min="0" placeholder="Ex.: 180" />
           </label>
           <div class="correction-result" aria-live="polite">
             <span>Diferença para o alvo</span>
@@ -41,7 +41,7 @@
           </div>
         </div>
         <div class="target-actions">
-          <button type="button" class="primary" id="save-target">Gravar alvo</button>
+          <button type="button" class="primary" id="save-parameters">Gravar parâmetros</button>
           <p class="save-status" id="target-save-status" aria-live="polite"></p>
         </div>
       </section>
