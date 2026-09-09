@@ -1,204 +1,55 @@
-const fields = [...document.querySelectorAll('input:not([type="search"])')];
-const mealCards = [...document.querySelectorAll('.meal-card')];
-const mealCarbs = [...document.querySelectorAll('.meal-carbs')];
-const savedTarget = localStorage.getItem('diabetes-dashboard-target');
-const savedCorrectionFactor = localStorage.getItem('diabetes-dashboard-correction-factor')
-  || localStorage.getItem('diabetes-dashboard-correction-insulin');
-const themeToggle = document.querySelector('#theme-toggle');
-const foodSearchInput = document.querySelector('#food-search-input');
-const foodSearchResults = document.querySelector('#food-search-results');
-const foodSearchStatus = document.querySelector('#food-search-status');
-
-function setTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  const isDark = theme === 'dark';
-  const label = isDark ? 'Usar tema claro' : 'Usar tema escuro';
-  themeToggle.setAttribute('aria-label', label);
-  themeToggle.setAttribute('title', label);
-  themeToggle.setAttribute('aria-pressed', String(isDark));
-}
-
-setTheme(localStorage.getItem('diabetes-dashboard-theme') || 'light');
-themeToggle.addEventListener('click', () => {
-  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('diabetes-dashboard-theme', theme);
-  setTheme(theme);
-});
-
-if (savedTarget !== null) document.querySelector('#target-glucose').value = savedTarget;
-if (savedCorrectionFactor !== null) document.querySelector('#correction-factor').value = savedCorrectionFactor;
-
-function getSavedCarbs() {
-  try {
-    return JSON.parse(localStorage.getItem('diabetes-dashboard-meal-carbs') || '{}');
-  } catch {
-    return {};
-  }
-}
-
-const savedCarbs = getSavedCarbs();
-mealCards.forEach((card) => {
-  card.querySelector('.meal-carbs').value = savedCarbs[card.dataset.meal] || '';
-});
-
+const $ = (selector) => document.querySelector(selector);
 const number = (value) => Number.parseFloat(value) || 0;
-const format = (value, suffix) => `${Number(value.toFixed(1)).toLocaleString('pt-BR')} ${suffix}`;
-const monthlyInsulinStorageKey = 'diabetes-dashboard-monthly-insulin';
+const foodStorageKey = 'diabetes-dashboard-food-entries';
+const favoriteStorageKey = 'diabetes-dashboard-food-favorites';
+const recentStorageKey = 'diabetes-dashboard-food-recents';
+const themeToggle = $('#theme-toggle');
+const foodSearchInput = $('#food-search-input');
+const foodSearchResults = $('#food-search-results');
+const foodSearchStatus = $('#food-search-status');
+const foodEditor = $('#food-editor');
+let foodIndex = [];
+let currentResults = [];
+let activeResult = -1;
+let selectedFood = null;
 
-function getMonthKey(offset = 0) {
-  const date = new Date();
-  date.setDate(1);
-  date.setMonth(date.getMonth() + offset);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
+const format = (value, suffix = '') => `${Number(value.toFixed(1)).toLocaleString('pt-BR')} ${suffix}`;
+const formatNutrition = (carbs, calories) => `${format(carbs, 'g CHO')} · ${format(calories, 'kcal')}`;
+const normalizeSearchText = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+const getStored = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; } };
+const getEntries = () => getStored(foodStorageKey, []);
+const getFavorites = () => getStored(favoriteStorageKey, []);
+const getRecents = () => getStored(recentStorageKey, []);
 
-function getMonthlyInsulin() {
-  try {
-    return JSON.parse(localStorage.getItem(monthlyInsulinStorageKey) || '{}');
-  } catch {
-    return {};
-  }
-}
+function setTheme(theme) { document.documentElement.dataset.theme = theme; const dark = theme === 'dark'; const label = dark ? 'Usar tema claro' : 'Usar tema escuro'; themeToggle.setAttribute('aria-label', label); themeToggle.title = label; themeToggle.setAttribute('aria-pressed', String(dark)); }
+setTheme(localStorage.getItem('diabetes-dashboard-theme') || 'light');
+themeToggle.addEventListener('click', () => { const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('diabetes-dashboard-theme', theme); setTheme(theme); });
 
-function updateMonthlyTotals() {
-  const monthlyInsulin = getMonthlyInsulin();
-  document.querySelector('#previous-month-insulin').textContent = format(number(monthlyInsulin[getMonthKey(-1)]), 'un.');
-  document.querySelector('#current-month-insulin').textContent = format(number(monthlyInsulin[getMonthKey()]), 'un.');
-}
+function getMonthKey(offset = 0) { const date = new Date(); date.setDate(1); date.setMonth(date.getMonth() + offset); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; }
+function updateMonthlyTotals() { const totals = getStored('diabetes-dashboard-monthly-insulin', {}); $('#previous-month-insulin').textContent = format(number(totals[getMonthKey(-1)]), 'un.'); $('#current-month-insulin').textContent = format(number(totals[getMonthKey()]), 'un.'); }
+function getCorrectionDose() { const factor = number($('#correction-factor').value); const current = $('#current-glucose').value; const target = $('#target-glucose').value; const difference = number(current) - number(target); const canCalculate = current && target && factor > 0; return { difference, canCalculate, dose: canCalculate && difference > 0 ? difference / factor : 0 }; }
+function updateCorrection() { const current = $('#current-glucose').value; const target = $('#target-glucose').value; const correction = getCorrectionDose(); $('#glucose-difference').textContent = current && target ? `${correction.difference > 0 ? '+' : ''}${format(correction.difference, 'mg/dL')}` : '—'; $('#correction-dose').textContent = correction.canCalculate ? format(correction.dose, 'un.') : '—'; }
+['#target-glucose', '#correction-factor', '#current-glucose'].forEach((id) => $(id).addEventListener('input', updateCorrection));
+['#target-glucose', '#correction-factor'].forEach((id) => { const key = id === '#target-glucose' ? 'diabetes-dashboard-target' : 'diabetes-dashboard-correction-factor'; const saved = localStorage.getItem(key) || (id === '#correction-factor' && localStorage.getItem('diabetes-dashboard-correction-insulin')); if (saved) $(id).value = saved; });
+$('#save-parameters').addEventListener('click', () => { const status = $('#target-save-status'); const target = $('#target-glucose'); const factor = $('#correction-factor'); if (![target, factor].some((input) => input.value)) { status.textContent = 'Informe o alvo ou o valor de correção para gravar.'; target.focus(); return; } if (![target, factor].every((input) => !input.value || input.validity.valid)) { status.textContent = 'Informe valores válidos para gravar.'; return; } if (target.value) localStorage.setItem('diabetes-dashboard-target', target.value); if (factor.value) localStorage.setItem('diabetes-dashboard-correction-factor', factor.value); const dose = getCorrectionDose().dose; if (dose > 0) { const totals = getStored('diabetes-dashboard-monthly-insulin', {}); const month = getMonthKey(); totals[month] = number(totals[month]) + dose; localStorage.setItem('diabetes-dashboard-monthly-insulin', JSON.stringify(totals)); updateMonthlyTotals(); status.textContent = 'Aplicação gravada no total deste mês.'; } else status.textContent = 'Parâmetros salvos; nenhuma aplicação foi adicionada ao mês.'; });
 
-function getCorrectionDose() {
-  const correctionFactor = number(document.querySelector('#correction-factor').value);
-  const currentInput = document.querySelector('#current-glucose');
-  const targetInput = document.querySelector('#target-glucose');
-  const difference = number(currentInput.value) - number(targetInput.value);
-  const canCalculate = currentInput.value && targetInput.value && correctionFactor > 0;
-  return { difference, canCalculate, dose: canCalculate && difference > 0 ? difference / correctionFactor : 0 };
-}
+function renderMeals() { const entries = getEntries(); let dailyCarbs = 0; let dailyCalories = 0; document.querySelectorAll('.meal-card').forEach((card) => { const list = card.querySelector('.meal-items'); const items = entries.filter((entry) => entry.meal === card.dataset.meal); const carbs = items.reduce((total, entry) => total + entry.carbs, 0); const calories = items.reduce((total, entry) => total + entry.calories, 0); dailyCarbs += carbs; dailyCalories += calories; list.replaceChildren(); card.querySelector('.meal-empty').hidden = Boolean(items.length); items.forEach((entry) => { const item = document.createElement('li'); item.className = 'meal-item'; const copy = document.createElement('span'); copy.innerHTML = `<strong>${entry.name}</strong><small>${entry.quantity} ${entry.unit} · ${formatNutrition(entry.carbs, entry.calories)}</small>`; const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove-food'; remove.dataset.entryId = entry.entryId; remove.setAttribute('aria-label', `Remover ${entry.name}`); remove.textContent = '×'; item.append(copy, remove); list.append(item); }); card.querySelector('.meal-total strong').textContent = formatNutrition(carbs, calories); }); $('#daily-food-total').textContent = formatNutrition(dailyCarbs, dailyCalories); }
+$('#meal-grid').addEventListener('click', (event) => { const button = event.target.closest('.remove-food'); if (!button) return; localStorage.setItem(foodStorageKey, JSON.stringify(getEntries().filter((entry) => entry.entryId !== button.dataset.entryId))); renderMeals(); });
 
-function updateTotals() {
-  const currentInput = document.querySelector('#current-glucose');
-  const targetInput = document.querySelector('#target-glucose');
-  const correction = getCorrectionDose();
-  document.querySelector('#glucose-difference').textContent = currentInput.value && targetInput.value ? `${correction.difference > 0 ? '+' : ''}${format(correction.difference, 'mg/dL')}` : '—';
-  document.querySelector('#correction-dose').textContent = correction.canCalculate ? format(correction.dose, 'un.') : '—';
-}
-
-function saveParameters() {
-  const parameters = [
-    { input: document.querySelector('#target-glucose'), storageKey: 'diabetes-dashboard-target' },
-    { input: document.querySelector('#correction-factor'), storageKey: 'diabetes-dashboard-correction-factor' },
-  ];
-  const status = document.querySelector('#target-save-status');
-  const invalid = parameters.find(({ input }) => input.value && !input.validity.valid);
-  if (invalid) {
-    status.textContent = 'Informe valores válidos para gravar.';
-    invalid.input.focus();
-    return;
-  }
-  const entered = parameters.filter(({ input }) => input.value);
-  if (!entered.length) {
-    status.textContent = 'Informe o alvo ou o valor de correção para gravar.';
-    parameters[0].input.focus();
-    return;
-  }
-  entered.forEach(({ input, storageKey }) => localStorage.setItem(storageKey, input.value));
-  const appliedDose = getCorrectionDose().dose;
-  if (appliedDose > 0) {
-    const monthlyInsulin = getMonthlyInsulin();
-    const currentMonth = getMonthKey();
-    monthlyInsulin[currentMonth] = number(monthlyInsulin[currentMonth]) + appliedDose;
-    localStorage.setItem(monthlyInsulinStorageKey, JSON.stringify(monthlyInsulin));
-    updateMonthlyTotals();
-    status.textContent = 'Aplicação gravada no total deste mês.';
-    return;
-  }
-  status.textContent = 'Parâmetros salvos; nenhuma aplicação foi adicionada ao mês.';
-}
-
-function saveCarbs() {
-  const invalid = mealCarbs.find((input) => input.value && !input.validity.valid);
-  const status = document.querySelector('#meal-save-status');
-  if (invalid) {
-    status.textContent = 'Informe valores válidos para gravar.';
-    invalid.focus();
-    return;
-  }
-  const carbs = {};
-  mealCards.forEach((card) => { carbs[card.dataset.meal] = card.querySelector('.meal-carbs').value; });
-  localStorage.setItem('diabetes-dashboard-meal-carbs', JSON.stringify(carbs));
-  status.textContent = 'Carboidratos salvos neste navegador.';
-}
-
-function normalizeSearchText(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function formatFoodNumber(value, suffix) {
-  return value === null || value === undefined ? '—' : `${Number(value).toLocaleString('pt-BR')} ${suffix}`;
-}
-
-function renderFoodResults(foods, query) {
-  foodSearchResults.replaceChildren();
-  foodSearchInput.setAttribute('aria-expanded', String(foods.length > 0));
-  if (!query) {
-    foodSearchStatus.textContent = 'Digite ao menos um caractere para pesquisar.';
-    return;
-  }
-  if (!foods.length) {
-    foodSearchStatus.textContent = 'Nenhum alimento encontrado.';
-    return;
-  }
-  foodSearchStatus.textContent = `${foods.length} resultado${foods.length > 1 ? 's' : ''} encontrado${foods.length > 1 ? 's' : ''}.`;
-  foods.forEach((food) => {
-    const item = document.createElement('li');
-    const name = document.createElement('strong');
-    const measure = document.createElement('span');
-    const nutrition = document.createElement('span');
-    item.className = 'food-search-result';
-    item.setAttribute('role', 'option');
-    name.textContent = food.alimento;
-    measure.textContent = `${food.medida_usual || 'Medida não informada'} · ${formatFoodNumber(food.quantidade_valor, food.quantidade_unidade === 'g' ? 'g' : 'g/ml')}`;
-    nutrition.textContent = `${formatFoodNumber(food.carboidratos_g, 'CHO')} · ${formatFoodNumber(food.calorias_kcal, 'kcal')}`;
-    item.append(name, measure, nutrition);
-    foodSearchResults.append(item);
-  });
-}
-
-async function loadFoodSearch() {
-  try {
-    const response = await fetch('Tabela_Alimentos_Codex.json');
-    if (!response.ok) throw new Error('Falha ao carregar a tabela.');
-    const data = await response.json();
-    const foodIndex = data.alimentos.map((food) => ({
-      ...food,
-      alimentoBusca: normalizeSearchText([food.alimento, food.medida_usual, food.categoria].filter(Boolean).join(' ')),
-    }));
-    foodSearchInput.disabled = false;
-    foodSearchStatus.textContent = `${foodIndex.length.toLocaleString('pt-BR')} alimentos disponíveis para pesquisa.`;
-    let searchTimer;
-    foodSearchInput.addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        const query = normalizeSearchText(foodSearchInput.value);
-        const terms = query.split(' ').filter(Boolean);
-        const results = terms.length ? foodIndex.filter((food) => terms.every((term) => food.alimentoBusca.includes(term))).slice(0, 12) : [];
-        renderFoodResults(results, query);
-      }, 150);
-    });
-  } catch {
-    foodSearchStatus.textContent = 'Não foi possível carregar a tabela de alimentos.';
-  }
-}
-
-fields.forEach((field) => field.addEventListener('input', updateTotals));
-document.querySelector('#save-parameters').addEventListener('click', saveParameters);
-document.querySelector('#save-carbs').addEventListener('click', saveCarbs);
-updateTotals();
-updateMonthlyTotals();
-loadFoodSearch();
+function foodReference(food) { const amount = Number.isFinite(Number(food.quantidade_valor)) ? `${food.quantidade_valor} ${food.quantidade_unidade === 'g' ? 'g' : 'g/ml'}` : 'quantidade não informada'; return `${food.medida_usual || 'Medida não informada'} · ${amount}`; }
+function rankFoods(query, foods = foodIndex) { const terms = normalizeSearchText(query).split(' ').filter(Boolean); const favorites = new Set(getFavorites()); const recent = getRecents(); const recentRank = new Map(recent.map((id, index) => [id, index])); return foods.filter((food) => !terms.length || terms.every((term) => food.search.includes(term))).sort((a, b) => { const score = (food) => (favorites.has(food.id) ? 40 : 0) + (recentRank.has(food.id) ? 20 - Math.min(recentRank.get(food.id), 19) : 0) + (food.search.startsWith(normalizeSearchText(query)) ? 10 : 0); return score(b) - score(a) || a.alimento.localeCompare(b.alimento, 'pt-BR'); }).slice(0, 12); }
+function renderFoodResults(foods, label) { currentResults = foods; activeResult = -1; foodSearchResults.replaceChildren(); foodSearchInput.setAttribute('aria-expanded', String(foods.length > 0)); foodSearchStatus.textContent = label || (foods.length ? `${foods.length} resultado${foods.length > 1 ? 's' : ''} encontrado${foods.length > 1 ? 's' : ''}.` : 'Nenhum alimento encontrado.'); foods.forEach((food, index) => { const item = document.createElement('li'); item.className = 'food-search-result'; item.id = `food-result-${index}`; item.dataset.index = index; item.tabIndex = -1; item.setAttribute('role', 'option'); item.innerHTML = `<strong>${food.alimento}</strong><span>${foodReference(food)}</span><span>${formatNutrition(number(food.carboidratos_g), number(food.calorias_kcal))}</span>`; foodSearchResults.append(item); }); }
+function selectFood(food) { selectedFood = food; const recents = [food.id, ...getRecents().filter((id) => id !== food.id)].slice(0, 12); localStorage.setItem(recentStorageKey, JSON.stringify(recents)); $('#selected-food-name').textContent = food.alimento; $('#selected-food-reference').textContent = foodReference(food); const portion = $('#food-portion'); portion.replaceChildren(); const option = document.createElement('option'); option.value = food.id; option.textContent = food.medida_usual || 'Porção de referência'; portion.append(option); const gramsAvailable = number(food.quantidade_valor) > 0; $('#grams-mode').hidden = !gramsAvailable; $('#quantity-mode input[value="grams"]').disabled = !gramsAvailable; $('#quantity-mode input[value="portion"]').checked = true; $('#food-quantity').value = 1; $('#quantity-label').firstChild.textContent = 'Quantidade de porções'; $('#favorite-food').textContent = getFavorites().includes(food.id) ? '★' : '☆'; $('#favorite-food').setAttribute('aria-label', getFavorites().includes(food.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'); foodEditor.hidden = false; updateFoodPreview(); foodSearchInput.value = food.alimento; foodSearchResults.replaceChildren(); foodSearchInput.setAttribute('aria-expanded', 'false'); foodSearchStatus.textContent = 'Alimento selecionado. Ajuste a quantidade e adicione à refeição.'; }
+function currentFoodCalculation() { if (!selectedFood) return { quantity: 0, unit: '', carbs: 0, calories: 0 }; const grams = $('#quantity-mode input[value="grams"]').checked; const quantity = number($('#food-quantity').value); const reference = number(selectedFood.quantidade_valor); const multiplier = grams && reference > 0 ? quantity / reference : quantity; return { quantity, unit: grams ? 'g' : (selectedFood.medida_usual || 'porção'), carbs: number(selectedFood.carboidratos_g) * multiplier, calories: number(selectedFood.calorias_kcal) * multiplier }; }
+function updateFoodPreview() { const calculation = currentFoodCalculation(); $('#food-preview-carbs').textContent = format(calculation.carbs, 'g'); $('#food-preview-calories').textContent = format(calculation.calories, 'kcal'); }
+foodSearchInput.addEventListener('input', () => { const query = foodSearchInput.value.trim(); renderFoodResults(query ? rankFoods(query) : [], query ? undefined : 'Digite ao menos um caractere para pesquisar.'); });
+foodSearchResults.addEventListener('click', (event) => { const result = event.target.closest('.food-search-result'); if (result) selectFood(currentResults[Number(result.dataset.index)]); });
+foodSearchInput.addEventListener('keydown', (event) => { if (event.key === 'Escape') { foodSearchResults.replaceChildren(); foodSearchInput.setAttribute('aria-expanded', 'false'); return; } if (!currentResults.length) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); activeResult = (activeResult + (event.key === 'ArrowDown' ? 1 : currentResults.length - 1)) % currentResults.length; [...foodSearchResults.children].forEach((item, index) => item.setAttribute('aria-selected', String(index === activeResult))); foodSearchInput.setAttribute('aria-activedescendant', `food-result-${activeResult}`); } if (event.key === 'Enter' && activeResult >= 0) { event.preventDefault(); selectFood(currentResults[activeResult]); } });
+$('#quantity-mode').addEventListener('change', () => { const grams = $('#quantity-mode input[value="grams"]').checked; $('#quantity-label').firstChild.textContent = grams ? 'Quantidade em gramas' : 'Quantidade de porções'; updateFoodPreview(); });
+$('#food-quantity').addEventListener('input', updateFoodPreview);
+$('#favorite-food').addEventListener('click', () => { if (!selectedFood) return; const favorites = getFavorites(); const included = favorites.includes(selectedFood.id); localStorage.setItem(favoriteStorageKey, JSON.stringify(included ? favorites.filter((id) => id !== selectedFood.id) : [...favorites, selectedFood.id])); selectFood(selectedFood); });
+foodEditor.addEventListener('submit', (event) => { event.preventDefault(); const calculation = currentFoodCalculation(); const status = $('#food-save-status'); if (!selectedFood || calculation.quantity <= 0) { status.textContent = 'Informe uma quantidade válida.'; $('#food-quantity').focus(); return; } const entry = { entryId: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, meal: $('#food-meal').value, foodId: selectedFood.id, name: selectedFood.alimento, quantity: calculation.quantity, unit: calculation.unit, carbs: calculation.carbs, calories: calculation.calories }; localStorage.setItem(foodStorageKey, JSON.stringify([...getEntries(), entry])); renderMeals(); status.textContent = `${selectedFood.alimento} adicionado à refeição.`; });
+$('#show-recent-foods').addEventListener('click', () => renderFoodResults(getRecents().map((id) => foodIndex.find((food) => food.id === id)).filter(Boolean), 'Alimentos recentes.'));
+$('#show-favorite-foods').addEventListener('click', () => renderFoodResults(getFavorites().map((id) => foodIndex.find((food) => food.id === id)).filter(Boolean), 'Alimentos favoritos.'));
+async function loadFoodSearch() { try { const response = await fetch('Tabela_Alimentos_Codex.json'); if (!response.ok) throw new Error(); const data = await response.json(); foodIndex = data.alimentos.map((food) => ({ ...food, search: normalizeSearchText([food.alimento, food.medida_usual, food.categoria].filter(Boolean).join(' ')) })); foodSearchInput.disabled = false; foodSearchStatus.textContent = `${foodIndex.length.toLocaleString('pt-BR')} alimentos disponíveis para pesquisa.`; } catch { foodSearchStatus.textContent = 'Não foi possível carregar a tabela de alimentos.'; } }
+updateCorrection(); updateMonthlyTotals(); renderMeals(); loadFoodSearch();
