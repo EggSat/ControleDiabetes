@@ -93,6 +93,23 @@
         </div>
       </section>
 
+      <section class="panel food-panel" aria-labelledby="food-table-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CATÁLOGO</p>
+            <h2 id="food-table-title">Tabela Alimentos</h2>
+          </div>
+          <p class="section-note">Pesquise para ver a medida de referência, carboidratos e calorias.</p>
+        </div>
+        <div class="food-search">
+          <label for="food-search-input">Pesquisar alimento
+            <input id="food-search-input" type="search" placeholder="Pesquise o alimento..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="food-search-results" aria-expanded="false" aria-describedby="food-search-status" disabled />
+          </label>
+          <p class="food-search-status" id="food-search-status" aria-live="polite">Carregando tabela de alimentos...</p>
+          <ul class="food-search-results" id="food-search-results" role="listbox" aria-label="Resultados da pesquisa"></ul>
+        </div>
+      </section>
+
       <section class="monthly-summary" aria-label="Total mensal de insulina aplicada">
         <span>Total aplicado no mês passado</span>
         <strong id="previous-month-insulin">0 un.</strong>

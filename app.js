@@ -1,10 +1,13 @@
-const fields = [...document.querySelectorAll('input')];
+const fields = [...document.querySelectorAll('input:not([type="search"])')];
 const mealCards = [...document.querySelectorAll('.meal-card')];
 const mealCarbs = [...document.querySelectorAll('.meal-carbs')];
 const savedTarget = localStorage.getItem('diabetes-dashboard-target');
 const savedCorrectionFactor = localStorage.getItem('diabetes-dashboard-correction-factor')
   || localStorage.getItem('diabetes-dashboard-correction-insulin');
 const themeToggle = document.querySelector('#theme-toggle');
+const foodSearchInput = document.querySelector('#food-search-input');
+const foodSearchResults = document.querySelector('#food-search-results');
+const foodSearchStatus = document.querySelector('#food-search-status');
 
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -126,8 +129,76 @@ function saveCarbs() {
   status.textContent = 'Carboidratos salvos neste navegador.';
 }
 
+function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatFoodNumber(value, suffix) {
+  return value === null || value === undefined ? '—' : `${Number(value).toLocaleString('pt-BR')} ${suffix}`;
+}
+
+function renderFoodResults(foods, query) {
+  foodSearchResults.replaceChildren();
+  foodSearchInput.setAttribute('aria-expanded', String(foods.length > 0));
+  if (!query) {
+    foodSearchStatus.textContent = 'Digite ao menos um caractere para pesquisar.';
+    return;
+  }
+  if (!foods.length) {
+    foodSearchStatus.textContent = 'Nenhum alimento encontrado.';
+    return;
+  }
+  foodSearchStatus.textContent = `${foods.length} resultado${foods.length > 1 ? 's' : ''} encontrado${foods.length > 1 ? 's' : ''}.`;
+  foods.forEach((food) => {
+    const item = document.createElement('li');
+    const name = document.createElement('strong');
+    const measure = document.createElement('span');
+    const nutrition = document.createElement('span');
+    item.className = 'food-search-result';
+    item.setAttribute('role', 'option');
+    name.textContent = food.alimento;
+    measure.textContent = `${food.medida_usual || 'Medida não informada'} · ${formatFoodNumber(food.quantidade_valor, food.quantidade_unidade === 'g' ? 'g' : 'g/ml')}`;
+    nutrition.textContent = `${formatFoodNumber(food.carboidratos_g, 'CHO')} · ${formatFoodNumber(food.calorias_kcal, 'kcal')}`;
+    item.append(name, measure, nutrition);
+    foodSearchResults.append(item);
+  });
+}
+
+async function loadFoodSearch() {
+  try {
+    const response = await fetch('Tabela_Alimentos_Codex.json');
+    if (!response.ok) throw new Error('Falha ao carregar a tabela.');
+    const data = await response.json();
+    const foodIndex = data.alimentos.map((food) => ({
+      ...food,
+      alimentoBusca: normalizeSearchText([food.alimento, food.medida_usual, food.categoria].filter(Boolean).join(' ')),
+    }));
+    foodSearchInput.disabled = false;
+    foodSearchStatus.textContent = `${foodIndex.length.toLocaleString('pt-BR')} alimentos disponíveis para pesquisa.`;
+    let searchTimer;
+    foodSearchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const query = normalizeSearchText(foodSearchInput.value);
+        const terms = query.split(' ').filter(Boolean);
+        const results = terms.length ? foodIndex.filter((food) => terms.every((term) => food.alimentoBusca.includes(term))).slice(0, 12) : [];
+        renderFoodResults(results, query);
+      }, 150);
+    });
+  } catch {
+    foodSearchStatus.textContent = 'Não foi possível carregar a tabela de alimentos.';
+  }
+}
+
 fields.forEach((field) => field.addEventListener('input', updateTotals));
 document.querySelector('#save-parameters').addEventListener('click', saveParameters);
 document.querySelector('#save-carbs').addEventListener('click', saveCarbs);
 updateTotals();
 updateMonthlyTotals();
+loadFoodSearch();
