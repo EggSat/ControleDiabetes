@@ -3,6 +3,21 @@ const mealInsulin = [...document.querySelectorAll('.meal-insulin')];
 const savedTarget = localStorage.getItem('diabetes-dashboard-target');
 const savedCorrectionFactor = localStorage.getItem('diabetes-dashboard-correction-factor')
   || localStorage.getItem('diabetes-dashboard-correction-insulin');
+const themeToggle = document.querySelector('#theme-toggle');
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const isDark = theme === 'dark';
+  themeToggle.textContent = isDark ? 'Usar tema claro' : 'Usar tema escuro';
+  themeToggle.setAttribute('aria-pressed', String(isDark));
+}
+
+setTheme(localStorage.getItem('diabetes-dashboard-theme') || 'light');
+themeToggle.addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('diabetes-dashboard-theme', theme);
+  setTheme(theme);
+});
 
 if (savedTarget !== null) document.querySelector('#target-glucose').value = savedTarget;
 if (savedCorrectionFactor !== null) document.querySelector('#correction-factor').value = savedCorrectionFactor;
