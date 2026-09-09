@@ -1,6 +1,5 @@
 const fields = [...document.querySelectorAll('input')];
 const mealInsulin = [...document.querySelectorAll('.meal-insulin')];
-const mealCarbs = [...document.querySelectorAll('.meal-carbs')];
 const savedTarget = localStorage.getItem('diabetes-dashboard-target');
 const savedCorrectionFactor = localStorage.getItem('diabetes-dashboard-correction-factor')
   || localStorage.getItem('diabetes-dashboard-correction-insulin');
@@ -10,23 +9,46 @@ if (savedCorrectionFactor !== null) document.querySelector('#correction-factor')
 
 const number = (value) => Number.parseFloat(value) || 0;
 const format = (value, suffix) => `${Number(value.toFixed(1)).toLocaleString('pt-BR')} ${suffix}`;
-function updateTotals() {
-  const carbs = mealCarbs.reduce((sum, input) => sum + number(input.value), 0);
-  const mealDose = mealInsulin.reduce((sum, input) => sum + number(input.value), 0);
+const monthlyInsulinStorageKey = 'diabetes-dashboard-monthly-insulin';
+
+function getMonthKey(offset = 0) {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + offset);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getMonthlyInsulin() {
+  try {
+    return JSON.parse(localStorage.getItem(monthlyInsulinStorageKey) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function updateMonthlyTotals() {
+  const monthlyInsulin = getMonthlyInsulin();
+  document.querySelector('#previous-month-insulin').textContent = format(number(monthlyInsulin[getMonthKey(-1)]), 'un.');
+  document.querySelector('#current-month-insulin').textContent = format(number(monthlyInsulin[getMonthKey()]), 'un.');
+}
+
+function getCorrectionDose() {
   const correctionFactor = number(document.querySelector('#correction-factor').value);
   const currentInput = document.querySelector('#current-glucose');
   const targetInput = document.querySelector('#target-glucose');
-  const current = number(currentInput.value);
-  const target = number(targetInput.value);
-  const difference = current - target;
-  const canCalculateCorrection = currentInput.value && targetInput.value && correctionFactor > 0;
-  const correctionDose = canCalculateCorrection && difference > 0 ? difference / correctionFactor : 0;
-  document.querySelector('#total-carbs').textContent = format(carbs, 'g');
-  document.querySelector('#total-meal-insulin').textContent = format(mealDose, 'un.');
-  document.querySelector('#total-insulin').textContent = format(mealDose + correctionDose, 'un.');
-  document.querySelector('#glucose-difference').textContent = currentInput.value && targetInput.value ? `${difference > 0 ? '+' : ''}${format(difference, 'mg/dL')}` : '—';
-  document.querySelector('#correction-dose').textContent = canCalculateCorrection ? format(correctionDose, 'un.') : '—';
+  const difference = number(currentInput.value) - number(targetInput.value);
+  const canCalculate = currentInput.value && targetInput.value && correctionFactor > 0;
+  return { difference, canCalculate, dose: canCalculate && difference > 0 ? difference / correctionFactor : 0 };
 }
+
+function updateTotals() {
+  const currentInput = document.querySelector('#current-glucose');
+  const targetInput = document.querySelector('#target-glucose');
+  const correction = getCorrectionDose();
+  document.querySelector('#glucose-difference').textContent = currentInput.value && targetInput.value ? `${correction.difference > 0 ? '+' : ''}${format(correction.difference, 'mg/dL')}` : '—';
+  document.querySelector('#correction-dose').textContent = correction.canCalculate ? format(correction.dose, 'un.') : '—';
+}
+
 function saveParameters() {
   const parameters = [
     { input: document.querySelector('#target-glucose'), storageKey: 'diabetes-dashboard-target' },
@@ -46,8 +68,20 @@ function saveParameters() {
     return;
   }
   entered.forEach(({ input, storageKey }) => localStorage.setItem(storageKey, input.value));
-  status.textContent = 'Parâmetros salvos neste navegador.';
+  const mealDose = mealInsulin.reduce((sum, input) => sum + number(input.value), 0);
+  const appliedDose = mealDose + getCorrectionDose().dose;
+  if (appliedDose > 0) {
+    const monthlyInsulin = getMonthlyInsulin();
+    const currentMonth = getMonthKey();
+    monthlyInsulin[currentMonth] = number(monthlyInsulin[currentMonth]) + appliedDose;
+    localStorage.setItem(monthlyInsulinStorageKey, JSON.stringify(monthlyInsulin));
+    updateMonthlyTotals();
+    status.textContent = 'Aplicação gravada no total deste mês.';
+    return;
+  }
+  status.textContent = 'Parâmetros salvos; nenhuma aplicação foi adicionada ao mês.';
 }
 fields.forEach((field) => field.addEventListener('input', updateTotals));
 document.querySelector('#save-parameters').addEventListener('click', saveParameters);
 updateTotals();
+updateMonthlyTotals();
