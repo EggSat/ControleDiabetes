@@ -1,5 +1,6 @@
 const fields = [...document.querySelectorAll('input')];
-const mealInsulin = [...document.querySelectorAll('.meal-insulin')];
+const mealCards = [...document.querySelectorAll('.meal-card')];
+const mealCarbs = [...document.querySelectorAll('.meal-carbs')];
 const savedTarget = localStorage.getItem('diabetes-dashboard-target');
 const savedCorrectionFactor = localStorage.getItem('diabetes-dashboard-correction-factor')
   || localStorage.getItem('diabetes-dashboard-correction-insulin');
@@ -23,6 +24,19 @@ themeToggle.addEventListener('click', () => {
 
 if (savedTarget !== null) document.querySelector('#target-glucose').value = savedTarget;
 if (savedCorrectionFactor !== null) document.querySelector('#correction-factor').value = savedCorrectionFactor;
+
+function getSavedCarbs() {
+  try {
+    return JSON.parse(localStorage.getItem('diabetes-dashboard-meal-carbs') || '{}');
+  } catch {
+    return {};
+  }
+}
+
+const savedCarbs = getSavedCarbs();
+mealCards.forEach((card) => {
+  card.querySelector('.meal-carbs').value = savedCarbs[card.dataset.meal] || '';
+});
 
 const number = (value) => Number.parseFloat(value) || 0;
 const format = (value, suffix) => `${Number(value.toFixed(1)).toLocaleString('pt-BR')} ${suffix}`;
@@ -85,8 +99,7 @@ function saveParameters() {
     return;
   }
   entered.forEach(({ input, storageKey }) => localStorage.setItem(storageKey, input.value));
-  const mealDose = mealInsulin.reduce((sum, input) => sum + number(input.value), 0);
-  const appliedDose = mealDose + getCorrectionDose().dose;
+  const appliedDose = getCorrectionDose().dose;
   if (appliedDose > 0) {
     const monthlyInsulin = getMonthlyInsulin();
     const currentMonth = getMonthKey();
@@ -98,7 +111,23 @@ function saveParameters() {
   }
   status.textContent = 'Parâmetros salvos; nenhuma aplicação foi adicionada ao mês.';
 }
+
+function saveCarbs() {
+  const invalid = mealCarbs.find((input) => input.value && !input.validity.valid);
+  const status = document.querySelector('#meal-save-status');
+  if (invalid) {
+    status.textContent = 'Informe valores válidos para gravar.';
+    invalid.focus();
+    return;
+  }
+  const carbs = {};
+  mealCards.forEach((card) => { carbs[card.dataset.meal] = card.querySelector('.meal-carbs').value; });
+  localStorage.setItem('diabetes-dashboard-meal-carbs', JSON.stringify(carbs));
+  status.textContent = 'Carboidratos salvos neste navegador.';
+}
+
 fields.forEach((field) => field.addEventListener('input', updateTotals));
 document.querySelector('#save-parameters').addEventListener('click', saveParameters);
+document.querySelector('#save-carbs').addEventListener('click', saveCarbs);
 updateTotals();
 updateMonthlyTotals();

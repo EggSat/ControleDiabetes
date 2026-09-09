@@ -72,24 +72,24 @@
         <div class="meal-grid" id="meal-grid">
           <article class="meal-card" data-meal="Café da manhã">
             <h3>Café da manhã</h3>
-            <label>Quant. insulina (un.)<input class="meal-insulin" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
             <label>Quant. carboidratos (g)<input class="meal-carbs" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
           </article>
           <article class="meal-card" data-meal="Almoço">
             <h3>Almoço</h3>
-            <label>Quant. insulina (un.)<input class="meal-insulin" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
             <label>Quant. carboidratos (g)<input class="meal-carbs" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
           </article>
           <article class="meal-card" data-meal="Lanche intermediário">
             <h3>Lanche intermediário</h3>
-            <label>Quant. insulina (un.)<input class="meal-insulin" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
             <label>Quant. carboidratos (g)<input class="meal-carbs" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
           </article>
           <article class="meal-card" data-meal="Noite">
             <h3>Noite</h3>
-            <label>Quant. insulina (un.)<input class="meal-insulin" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
             <label>Quant. carboidratos (g)<input class="meal-carbs" type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" /></label>
           </article>
+        </div>
+        <div class="meal-actions">
+          <button type="button" class="primary" id="save-carbs">Gravar carboidratos</button>
+          <p class="save-status" id="meal-save-status" aria-live="polite"></p>
         </div>
       </section>
 
