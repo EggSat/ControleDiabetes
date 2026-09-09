@@ -15,7 +15,12 @@
           <h1>Meu Controle de Diabetes</h1>
           <p class="subtitle">Registre carboidratos, insulina e sua meta de glicemia em um só lugar.</p>
         </div>
-        <button type="button" class="theme-toggle" id="theme-toggle" aria-pressed="false">Usar tema escuro</button>
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Usar tema escuro" title="Usar tema escuro" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 3.5 13.7 10.3 20.5 12 13.7 13.7 12 20.5 10.3 13.7 3.5 12 10.3 10.3 12 3.5Z" />
+            <path d="m18.5 3 .6 2.4 2.4.6-2.4.6-.6 2.4-.6-2.4-2.4-.6 2.4-.6.6-2.4Z" />
+          </svg>
+        </button>
       </header>
 
       <section class="panel correction-panel" aria-labelledby="correction-title">
@@ -39,11 +44,11 @@
         </div>
         <div class="correction-footer">
           <div class="correction-results" aria-live="polite">
-            <div class="correction-result correction-result--dose">
+            <div class="correction-result">
               <span>Diferença para o alvo</span>
               <strong id="glucose-difference">—</strong>
             </div>
-            <div class="correction-result">
+            <div class="correction-result correction-result--dose">
               <span>Quantidade de insulina para aplicar</span>
               <strong id="correction-dose">—</strong>
             </div>

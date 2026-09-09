@@ -8,7 +8,9 @@ const themeToggle = document.querySelector('#theme-toggle');
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   const isDark = theme === 'dark';
-  themeToggle.textContent = isDark ? 'Usar tema claro' : 'Usar tema escuro';
+  const label = isDark ? 'Usar tema claro' : 'Usar tema escuro';
+  themeToggle.setAttribute('aria-label', label);
+  themeToggle.setAttribute('title', label);
   themeToggle.setAttribute('aria-pressed', String(isDark));
 }
 
