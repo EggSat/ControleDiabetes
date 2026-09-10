@@ -3,3 +3,17 @@
 .correction-results{grid-template-columns:repeat(3,minmax(0,1fr));width:min(100%,720px)}
 @media(max-width:580px){.correction-results{grid-template-columns:1fr}}
 .correction-results{grid-template-columns:repeat(2,minmax(190px,1fr));width:min(100%,460px)}.correction-result--dose{grid-column:1/-1;justify-self:center;width:220px}
+@media(max-width:580px) {
+  /* Faz os botões "Recentes" e "Favoritos" ficarem um embaixo do outro */
+  .food-shortcuts {
+    flex-direction: column;
+  }
+  .food-shortcuts button {
+    width: 100%;
+  }
+  /* Mantém o botão de tema escuro (lua/sol) no canto superior direito */
+  .hero {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+  }
+}
