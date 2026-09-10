@@ -2,3 +2,4 @@
 /* Mantém o total destacado no centro entre os dois cálculos. */
 .correction-results{grid-template-columns:repeat(3,minmax(0,1fr));width:min(100%,720px)}
 @media(max-width:580px){.correction-results{grid-template-columns:1fr}}
+.correction-results{grid-template-columns:repeat(2,minmax(190px,1fr));width:min(100%,460px)}.correction-result--dose{grid-column:1/-1;justify-self:center;width:220px}
