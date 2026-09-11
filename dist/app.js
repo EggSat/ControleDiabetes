@@ -6,6 +6,7 @@ const recentStorageKey = 'diabetes-dashboard-food-recents';
 const recentByMealStorageKey = 'recent_foods_by_meal';
 const carbTargetStorageKey = 'carbohydrate_count_settings';
 const dailyDateStorageKey = 'diabetes-dashboard-food-date';
+const insulinHistoryStorageKey = 'diabetes-dashboard-insulin-history';
 const themeToggle = $('#theme-toggle');
 const foodSearchInput = $('#food-search-input');
 const foodSearchResults = $('#food-search-results');
@@ -15,6 +16,8 @@ let foodIndex = [];
 let currentResults = [];
 let activeResult = -1;
 let selectedFood = null;
+let historyTimer;
+let automaticHistoryCreatedAt = null;
 
 const format = (value, suffix = '') => `${Number(value.toFixed(1)).toLocaleString('pt-BR')} ${suffix}`;
 const formatNutrition = (carbs, calories) => `${format(carbs, 'g CHO')} · ${format(calories, 'kcal')}`;
@@ -26,6 +29,7 @@ const getRecents = () => getStored(recentStorageKey, []);
 const mealTypes = ['cafe_da_manha', 'almoco', 'lanche', 'jantar', 'ceia', 'outro'];
 const getCarbTargets = () => getStored(carbTargetStorageKey, {});
 const getRecentsByMeal = () => getStored(recentByMealStorageKey, {});
+const getInsulinHistory = () => getStored(insulinHistoryStorageKey, []);
 const todayKey = () => new Date().toLocaleDateString('en-CA');
 function suggestedMeal() { const hour = new Date().getHours(); if (hour >= 5 && hour <= 10) return 'cafe_da_manha'; if (hour <= 14) return 'almoco'; if (hour <= 17) return 'lanche'; if (hour <= 22) return 'jantar'; return 'ceia'; }
 function resetDailyEntriesIfNeeded() { if (localStorage.getItem(dailyDateStorageKey) === todayKey()) return; localStorage.setItem(foodStorageKey, '[]'); localStorage.setItem(dailyDateStorageKey, todayKey()); }
@@ -40,7 +44,7 @@ function getCorrectionDose() { const factor = number($('#correction-factor').val
 function getCarbDose() { const entries = getEntries(); const targets = getCarbTargets(); let canCalculate = false; const dose = mealTypes.reduce((total, meal) => { const target = number(targets[meal]); if (target <= 0) return total; canCalculate = true; const carbs = entries.filter((entry) => entry.meal === meal).reduce((mealTotal, entry) => mealTotal + number(entry.carbs), 0); return total + carbs / target; }, 0); return { canCalculate, dose }; }
 function getInsulinDose() { const correction = getCorrectionDose(); const carbs = getCarbDose(); return { canCalculate: correction.canCalculate || carbs.canCalculate, dose: correction.dose + carbs.dose }; }
 function updateCorrection() { const current = $('#current-glucose').value; const target = $('#target-glucose').value; const correction = getCorrectionDose(); const carbs = getCarbDose(); const insulin = getInsulinDose(); $('#glucose-difference').textContent = current && target ? `${correction.difference > 0 ? '+' : ''}${format(correction.difference, 'mg/dL')}` : '—'; $('#meal-dose').textContent = carbs.canCalculate ? `${format(carbs.carbs, 'g CHO')} ÷ ${format(carbs.target, 'g')} = ${format(carbs.dose, 'un.')}` : '—'; $('#correction-dose').textContent = insulin.canCalculate ? format(insulin.dose, 'un.') : '—'; }
-['#target-glucose', '#correction-factor', '#current-glucose'].forEach((id) => $(id).addEventListener('input', updateCorrection));
+['#target-glucose', '#correction-factor', '#current-glucose'].forEach((id) => $(id).addEventListener('input', () => { updateCorrection(); scheduleHistoryRecord(); }));
 ['#target-glucose', '#correction-factor'].forEach((id) => { const key = id === '#target-glucose' ? 'diabetes-dashboard-target' : 'diabetes-dashboard-correction-factor'; const saved = localStorage.getItem(key) || (id === '#correction-factor' && localStorage.getItem('diabetes-dashboard-correction-insulin')); if (saved) $(id).value = saved; });
 $('#save-parameters').addEventListener('click', () => { const status = $('#target-save-status'); const target = $('#target-glucose'); const factor = $('#correction-factor'); if (![target, factor].some((input) => input.value)) { status.textContent = 'Informe o alvo ou o valor de correção para gravar.'; target.focus(); return; } if (![target, factor].every((input) => !input.value || input.validity.valid)) { status.textContent = 'Informe valores válidos para gravar.'; return; } if (target.value) localStorage.setItem('diabetes-dashboard-target', target.value); if (factor.value) localStorage.setItem('diabetes-dashboard-correction-factor', factor.value); const dose = getInsulinDose().dose; if (dose > 0) { const totals = getStored('diabetes-dashboard-monthly-insulin', {}); const month = getMonthKey(); totals[month] = number(totals[month]) + dose; localStorage.setItem('diabetes-dashboard-monthly-insulin', JSON.stringify(totals)); updateMonthlyTotals(); status.textContent = 'Aplicação gravada no total deste mês.'; } else status.textContent = 'Parâmetros salvos; nenhuma aplicação foi adicionada ao mês.'; });
 
@@ -68,8 +72,10 @@ $('#show-favorite-foods').addEventListener('click', () => renderFoodResults(getF
 async function loadFoodSearch() { try { const response = await fetch('Tabela_Alimentos_Codex.json'); if (!response.ok) throw new Error(); const data = await response.json(); foodIndex = data.alimentos.map((food) => ({ ...food, search: normalizeSearchText([food.alimento, food.medida_usual, food.categoria].filter(Boolean).join(' ')) })); foodSearchInput.disabled = false; foodSearchStatus.textContent = `${foodIndex.length.toLocaleString('pt-BR')} alimentos disponíveis para pesquisa.`; } catch { foodSearchStatus.textContent = 'Não foi possível carregar a tabela de alimentos.'; } }
 resetDailyEntriesIfNeeded(); loadCarbTargets(); $('#food-meal').value = suggestedMeal(); updateCorrection(); updateMonthlyTotals(); renderMeals(); loadFoodSearch();
 // A distribuição mantém o total e a dose focados na última refeição registrada.
-function getCarbDose() { const entries = getEntries(); const meal = entries.at(-1)?.meal; const target = number(getCarbTargets()[meal]); if (!meal || target <= 0) return { canCalculate: false, dose: 0, carbs: 0, target: 0 }; const carbs = entries.filter((entry) => entry.meal === meal).reduce((total, entry) => total + number(entry.carbs), 0); return { canCalculate: true, dose: carbs / target, carbs, target }; }
+function getCarbDose() { const entries = getEntries(); const meal = entries.at(-1)?.meal; const carbs = meal ? entries.filter((entry) => entry.meal === meal).reduce((total, entry) => total + number(entry.carbs), 0) : 0; const target = number(getCarbTargets()[meal]); if (!meal || target <= 0) return { meal, canCalculate: false, dose: 0, carbs, target: 0 }; return { meal, canCalculate: true, dose: carbs / target, carbs, target }; }
+function renderHistory() { const body = $('#insulin-history'); const meals = { cafe_da_manha: 'Café da manhã', almoco: 'Almoço', lanche: 'Lanche', jantar: 'Jantar', ceia: 'Ceia', outro: 'Outro' }; const records = getInsulinHistory().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); body.replaceChildren(); if (!records.length) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = 5; cell.textContent = 'Nenhuma dose calculada registrada.'; row.append(cell); body.append(row); return; } records.forEach((record) => { const row = document.createElement('tr'); [new Date(record.createdAt).toLocaleString('pt-BR'), meals[record.meal] || record.meal, format(number(record.glucose), 'mg/dL'), format(number(record.mealCarbs), 'g'), format(number(record.insulinDose), 'un.')].forEach((value) => { const cell = document.createElement('td'); cell.textContent = value; row.append(cell); }); body.append(row); }); }
+function scheduleHistoryRecord() { clearTimeout(historyTimer); const glucoseInput = $('#current-glucose'); const carbs = getCarbDose(); const insulin = getInsulinDose(); if (!glucoseInput.value || !glucoseInput.validity.valid || !carbs.meal || carbs.carbs <= 0 || !insulin.canCalculate) return; const snapshot = { meal: carbs.meal, glucose: number(glucoseInput.value), mealCarbs: carbs.carbs, insulinDose: insulin.dose }; historyTimer = setTimeout(() => { const history = getInsulinHistory(); if (automaticHistoryCreatedAt) { const index = history.findIndex((record) => record.createdAt === automaticHistoryCreatedAt && record.meal === snapshot.meal); if (index >= 0) { history[index] = { ...history[index], ...snapshot }; localStorage.setItem(insulinHistoryStorageKey, JSON.stringify(history)); renderHistory(); return; } } const record = { createdAt: new Date().toISOString(), ...snapshot }; automaticHistoryCreatedAt = record.createdAt; localStorage.setItem(insulinHistoryStorageKey, JSON.stringify([...history, record])); renderHistory(); }, 2000); }
 const renderAllMeals = renderMeals;
-renderMeals = () => { renderAllMeals(); const entries = getEntries(); const meal = entries.at(-1)?.meal; const items = entries.filter((entry) => entry.meal === meal); $('#daily-food-total').textContent = formatNutrition(items.reduce((total, entry) => total + entry.carbs, 0), items.reduce((total, entry) => total + entry.calories, 0)); updateCorrection(); };
+renderMeals = () => { renderAllMeals(); const entries = getEntries(); const meal = entries.at(-1)?.meal; const items = entries.filter((entry) => entry.meal === meal); $('#daily-food-total').textContent = formatNutrition(items.reduce((total, entry) => total + entry.carbs, 0), items.reduce((total, entry) => total + entry.calories, 0)); updateCorrection(); scheduleHistoryRecord(); };
 $('.daily-total span').textContent = 'Total da refeição';
-renderMeals();
+renderMeals(); renderHistory();
