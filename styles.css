@@ -75,6 +75,7 @@ fieldset input{width:auto}
 .theme-toggle{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;color:#3ec2a8;border-color:#2f3e48;background:#1b272f}
 .theme-toggle:hover{background:#22313b;border-color:#3f5260}
 .theme-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.5}
+.header-export-actions{display:flex;gap:6px;margin-left:auto}.header-export-actions button{padding:8px 10px;font-size:.75rem}
 footer{color:var(--muted);font-size:.78rem;line-height:1.5;text-align:center;max-width:800px;margin:24px auto 0}
 
 @media(max-width:850px){
