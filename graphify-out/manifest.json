@@ -1,0 +1,158 @@
+{
+  ".codex-stack/stack-state.json": {
+    "mtime": 1789595274.661336,
+    "seen": 1789604849.523197,
+    "ast_hash": "5d4a2854bd2f9e1ccc6cc7f23202fac9",
+    "semantic_hash": ""
+  },
+  ".codex/hooks.json": {
+    "mtime": 1789595271.931268,
+    "seen": 1789604849.5232065,
+    "ast_hash": "5ebef3dd159986e465ab65e4014107ec",
+    "semantic_hash": ""
+  },
+  ".openai/hosting.json": {
+    "mtime": 1789091345.1809576,
+    "seen": 1789604849.5232105,
+    "ast_hash": "75f3f09a8b05c1938c229e406863cb0d",
+    "semantic_hash": ""
+  },
+  "Codex_CarbTrack_Completo.json": {
+    "mtime": 1788996045.7948284,
+    "seen": 1789604849.523214,
+    "ast_hash": "a3615d2f481f887559ecf93786bee073",
+    "semantic_hash": ""
+  },
+  "Tabela_Alimentos_Codex.json": {
+    "mtime": 1788992551.776661,
+    "seen": 1789604849.523218,
+    "ast_hash": "bdcb12425e6c6fc00a183da88dfe7577",
+    "semantic_hash": ""
+  },
+  "app.js": {
+    "mtime": 1789604165.9224727,
+    "seen": 1789604849.5232213,
+    "ast_hash": "bf624855142bba13f065a554a0ecfa8e",
+    "semantic_hash": ""
+  },
+  "serve.cjs": {
+    "mtime": 1789598898.7300777,
+    "seen": 1789604849.5232255,
+    "ast_hash": "857fdbea2cb1757e4802637673a9e2ea",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail-audit/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.5232284,
+    "ast_hash": "2a757432defa9d63639a3aca3bbbf23a",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail-debt/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.5232315,
+    "ast_hash": "33f49652fe513cf08082e9bcf8e2ecf2",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail-gain/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.5232344,
+    "ast_hash": "e0090358fafc0a4b01716b88399e8405",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail-help/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.5232382,
+    "ast_hash": "a89c89a1fec6a90c3751302574389d47",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail-review/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.523242,
+    "ast_hash": "438e2414888145bc0108fa63f64314fd",
+    "semantic_hash": ""
+  },
+  ".agents/skills/ponytail/SKILL.md": {
+    "mtime": 1789396413.0,
+    "seen": 1789604849.523245,
+    "ast_hash": "421e40917db6cc732864011799da3235",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/SKILL.md": {
+    "mtime": 1789595272.1954718,
+    "seen": 1789604849.523248,
+    "ast_hash": "212b55d95333d84e14262f8ec83faa2b",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/add-watch.md": {
+    "mtime": 1789506252.4958823,
+    "seen": 1789604849.5232506,
+    "ast_hash": "d59d027fe449f06aa03905a01184e779",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/exports.md": {
+    "mtime": 1789506252.4968905,
+    "seen": 1789604849.5232532,
+    "ast_hash": "9da2a2152e60a22f07f05fed5158f287",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1789506252.4968905,
+    "seen": 1789604849.523256,
+    "ast_hash": "bf895ec4d4e40f5f66f7d31c2a9bd4a7",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1789506252.497418,
+    "seen": 1789604849.523259,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/hooks.md": {
+    "mtime": 1789506252.4979186,
+    "seen": 1789604849.5232618,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/query.md": {
+    "mtime": 1789506252.498421,
+    "seen": 1789604849.5232644,
+    "ast_hash": "3c46f8ad006874260614ed8657d02307",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/transcribe.md": {
+    "mtime": 1789506252.4989204,
+    "seen": 1789604849.5232673,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/update.md": {
+    "mtime": 1789506252.4989204,
+    "seen": 1789604849.5232701,
+    "ast_hash": "9378bd03d56baaf78bd738ab3848f142",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1789595271.928234,
+    "seen": 1789604849.5232744,
+    "ast_hash": "80daf8355f7f5efcbc3d811a756a2127",
+    "semantic_hash": ""
+  },
+  "RTK.md": {
+    "mtime": 1789595270.0586648,
+    "seen": 1789604849.5232773,
+    "ast_hash": "5215800c9abc77330d271ad256c71f7f",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1789596725.0393116,
+    "seen": 1789604849.5232801,
+    "ast_hash": "326849cb90c3402644c433966dd2ac27",
+    "semantic_hash": ""
+  },
+  "Tabela_Alimentos_.pdf": {
+    "mtime": 1788991965.3516083,
+    "seen": 1789604849.5232835,
+    "ast_hash": "43902e5c3cf06a89ce4fa9e55551300c",
+    "semantic_hash": ""
+  }
+}
